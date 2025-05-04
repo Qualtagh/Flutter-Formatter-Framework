@@ -37,10 +37,11 @@ enum ChangeType {
   /// It's usually put to the end of the text, but it's not guaranteed.
   /// Users don't expect a particular cursor position after undo, so it should be fine.
   /// This is a fallback for all other cases: any unrecognized change is treated as undo.
-  undo(null);
+  undo(true);
 
-  /// Whether the change is an insertion (true) or deletion (false).
-  final bool? isInsert;
+  /// Whether to put the cursor to the end of changed part (true) or to the beginning (false).
+  /// Mostly, same as: an insertion (true) or deletion (false). Undo is treated as insertion.
+  final bool isInsert;
 
   const ChangeType(this.isInsert);
 }

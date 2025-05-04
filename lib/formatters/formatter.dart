@@ -80,7 +80,7 @@ abstract class Formatter extends TextInputFormatter {
       // - erasure: no adjustment is needed because all formatting changes
       //   are performed after the removed substring (after the cursor)
       final reached = i == rawSelection - 1 || i == rawSelection && i == newValue.text.length;
-      final inserting = changeType.isInsert ?? true;
+      final inserting = changeType.isInsert;
       if (reached && inserting) {
         newSelection = newText.length + result.cursorShift;
       }
