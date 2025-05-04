@@ -2,25 +2,9 @@ import 'dart:core';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_formatter_framework/formatters/change_type.dart';
 import 'package:flutter_formatter_framework/formatters/text_editing_context.dart';
 import 'package:flutter_formatter_framework/util/string_extension.dart';
-
-enum ChangeType {
-  /// Insert characters (type or paste): move cursor to the end of inserted sequence
-  insert,
-
-  /// Erase backward (backspace button): put cursor to the beginning of erased sequence
-  erase,
-
-  /// Erase forward (delete button): keep cursor at the same position
-  delete,
-
-  /// Replace selection: put cursor to the end of inserted sequence
-  replace,
-
-  /// Clear selection: put cursor to the beginning of selected substring
-  clear,
-}
 
 class CancelException implements Exception {}
 
@@ -74,28 +58,6 @@ abstract class Formatter extends TextInputFormatter {
     );
   }
 
-  /// Detect a type of the text change
-  ChangeType getChangeType(TextEditingValue oldValue, TextEditingValue newValue) {
-    // This function doesn't support chaining of formatters.
-    // After chaining, oldValue is retrieved before applying any formatters,
-    // but newValue is the result of the previous formatter.
-    // TODO: find a way to avoid a loss of information after chaining.
-    final isSelected = oldValue.selection.start < oldValue.selection.end;
-    if (isSelected) {
-      if (oldValue.selection.start == newValue.selection.start) {
-        return ChangeType.clear;
-      }
-      return ChangeType.replace;
-    }
-    if (oldValue.selection.start == newValue.selection.start) {
-      return ChangeType.delete;
-    }
-    if (oldValue.selection.start < newValue.selection.start) {
-      return ChangeType.insert;
-    }
-    return ChangeType.erase;
-  }
-
   /// Apply formatting to the text in a streaming manner.
   /// Use it instead of [formatEditUpdate] to simplify
   /// dealing with the cursor position.
@@ -118,7 +80,7 @@ abstract class Formatter extends TextInputFormatter {
       // - erasure: no adjustment is needed because all formatting changes
       //   are performed after the removed substring (after the cursor)
       final reached = i == rawSelection - 1 || i == rawSelection && i == newValue.text.length;
-      final inserting = changeType == ChangeType.insert || changeType == ChangeType.replace;
+      final inserting = changeType.isInsert ?? true;
       if (reached && inserting) {
         newSelection = newText.length + result.cursorShift;
       }

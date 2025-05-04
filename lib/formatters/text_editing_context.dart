@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_formatter_framework/formatters/formatter.dart';
+import 'package:flutter_formatter_framework/formatters/change_type.dart';
 
 class TextEditingContext {
   final TextEditingValue old;
