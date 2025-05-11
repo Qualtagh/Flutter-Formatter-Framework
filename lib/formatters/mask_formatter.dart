@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
+import 'package:flutter_formatter_framework/formatters/streaming_formatter.dart';
 import 'package:flutter_formatter_framework/formatters/text_editing_context.dart';
 
 typedef Matcher = bool Function(String char);
@@ -11,7 +14,10 @@ class Matchers {
   }
 
   static Matcher regex(RegExp regex) => (char) => regex.hasMatch(char);
+  static Matcher equals(String value) => (char) => char == value;
   static Matcher not(Matcher matcher) => (char) => !matcher(char);
+
+  // TODO: add optimization for set and equals
   static Matcher or(Matcher a, Matcher b) => (char) => a(char) || b(char);
   static Matcher and(Matcher a, Matcher b) => (char) => a(char) && b(char);
   static bool any(String char) => true;
@@ -27,7 +33,7 @@ enum OverflowPolicy {
   truncate,
 }
 
-class MaskFormatter extends Formatter {
+class MaskFormatter extends StreamingFormatter {
   final String mask;
   final Map<String, Matcher> maskCharMap;
   final Map<String, String> fallbackMap;
@@ -63,12 +69,26 @@ class MaskFormatter extends Formatter {
         lastMatcher = variableMatcher;
       } else {
         // Constant character - combine with previous matcher
-        final constantMatcher = Matchers.set({maskChar});
+        final constantMatcher = Matchers.equals(maskChar);
         _rawMatchers[i] = constantMatcher;
         lastMatcher = Matchers.or(constantMatcher, lastMatcher);
       }
       _positionMatchers[i] = lastMatcher;
     }
+  }
+
+  @override
+  String deformat(String text) {
+    final length = min(text.length, mask.length);
+    final buffer = StringBuffer();
+    for (int i = 0; i < length; i++) {
+      final char = text[i];
+      final isVariable = maskCharMap.containsKey(mask[i]);
+      if (isVariable) {
+        buffer.write(char);
+      }
+    }
+    return buffer.toString();
   }
 
   String _getConstantCharsBetween(int from, int to) {
@@ -95,7 +115,7 @@ class MaskFormatter extends Formatter {
     final inserted = context.change.type.isInsert;
     int resultLength = 0;
     return streamingEditUpdate(context, (char) {
-      if (char == Formatter.eol) {
+      if (char == StreamingFormatter.eol) {
         // Handle end of line - check if we need to append constant chars
         final constantChars = _getConstantCharsBetween(resultLength, mask.length);
         final isFallback = resultLength < mask.length && maskCharMap.containsKey(mask[resultLength]);

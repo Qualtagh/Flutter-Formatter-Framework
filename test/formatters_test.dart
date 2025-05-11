@@ -1,7 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
+import 'package:flutter_formatter_framework/formatters/change.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/formatters/mask_formatter.dart';
+import 'package:flutter_formatter_framework/util/string_extension.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// If [expectedValue] and [expectedPosition] are omitted, the test checks
@@ -27,7 +29,7 @@ void compareEditingValues(TextEditingValue actual, TextEditingValue expected) {
 }
 
 TestFunction makeTestFunction({
-  required TextInputFormatter formatter,
+  required Formatter formatter,
   bool checkCursorPosition = true,
   TextInputFormatter? priorFormatter,
 }) {
@@ -42,32 +44,33 @@ TestFunction makeTestFunction({
   ]) {
     final oldInput = TextEditingValue(text: oldValue, selection: TextSelection(baseOffset: start, extentOffset: end));
     final newInput = TextEditingValue(text: newValue, selection: TextSelection.collapsed(offset: position));
-    final actual = formatter.formatEditUpdate(oldInput, newInput);
-    final expected =
-        expectedValue == null || expectedPosition == null
-            ? oldInput
-            : TextEditingValue(text: expectedValue, selection: TextSelection.collapsed(offset: expectedPosition));
-    if (checkCursorPosition) {
-      compareEditingValues(actual, expected);
-    } else {
-      expect(actual.text, expected.text);
-    }
-    if (priorFormatter == null) {
-      return;
-    }
-    final chainFormatter = ChainFormatter([priorFormatter, formatter]);
-    final chainActual = chainFormatter.formatEditUpdate(oldInput, newInput);
-    if (checkCursorPosition) {
-      compareEditingValues(chainActual, expected);
-    } else {
-      expect(chainActual.text, expected.text);
+    final inserting = getChange(oldInput, newInput).type.isInsert;
+    final formatters = [
+      formatter,
+      if (priorFormatter != null) ChainFormatter([priorFormatter, formatter]),
+    ];
+    for (final currentFormatter in formatters) {
+      final actual = currentFormatter.formatEditUpdate(oldInput, newInput);
+      final expected =
+          expectedValue == null || expectedPosition == null
+              ? oldInput
+              : TextEditingValue(text: expectedValue, selection: TextSelection.collapsed(offset: expectedPosition));
+      if (checkCursorPosition) {
+        compareEditingValues(actual, expected);
+      } else {
+        expect(actual.text, expected.text);
+      }
+      if (inserting) {
+        expect(currentFormatter.format(newValue), expectedValue ?? '');
+      }
+      // TODO: only suitable for MaskFormatter, the output of other formatters may be more complex
+      expect(currentFormatter.deformat(actual.text), actual.text.digitsOnly());
     }
   };
 }
 
-/// This one assumes that cursor position works well and only
-/// concentrates on the text value.
-SimpleTestFunction makeSimpleTestFunction({required TextInputFormatter formatter, TextInputFormatter? priorFormatter}) {
+/// This one assumes that cursor position works well and only concentrates on the text value
+SimpleTestFunction makeSimpleTestFunction({required Formatter formatter, TextInputFormatter? priorFormatter}) {
   final t = makeTestFunction(formatter: formatter, checkCursorPosition: false, priorFormatter: priorFormatter);
   return (String oldValue, String newValue, String expectedValue) =>
       t(oldValue, 0, oldValue.length, newValue, newValue.length, expectedValue, expectedValue.length);
