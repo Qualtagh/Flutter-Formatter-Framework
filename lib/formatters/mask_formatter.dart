@@ -7,11 +7,33 @@ import 'package:flutter_formatter_framework/types/matchers.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 
 enum OverflowPolicy {
-  /// Prohibit any changes which overflow the mask (restore the previous value)
+  /// Prohibit any changes which overflow the mask (restore the previous value).
+  /// Example: mask = '####', cursor at 2, value = '12|34', enter '0' => '12|34' (no changes)
   cancel,
 
-  /// Truncate the value to the mask length
+  /// Truncate the value to the mask length.
+  /// Example: mask = '####', cursor at 2, value = '12|34', enter '0' => '120|3'
   truncate,
+}
+
+enum CompletionPolicy {
+  /// Stop exactly at the end of input.
+  /// Example: mask = '##-##', value = '1', enter '2' => '12' (no dash at the end)
+  lazy,
+
+  /// At the end of input, add all constant and fallback characters from the mask.
+  /// Example: mask = '##-##', value = '1', enter '2' => '12-' (with dash at the end)
+  eager,
+
+  /// Add only pure constant characters. Stop before fallback characters.
+  /// If [fallbackMap] is empty, this is the same as [eager].
+  /// Example: mask = '##.@@', value = '1', enter '2', a fallback for '@' is '0' => '12.' (dot is added, but 0 is not)
+  lazyIfFallback,
+
+  /// Add only fallback characters. Stop before constant characters.
+  /// If [fallbackMap] is empty, this is the same as [lazy].
+  /// Example: mask = '##@.@@', value = '1', enter '2', a fallback for '@' is '0' => '120' (0 is added, but dot is not)
+  eagerIfFallback,
 }
 
 class MaskFormatter extends StreamingFormatter {
@@ -19,6 +41,7 @@ class MaskFormatter extends StreamingFormatter {
   final Map<String, Matcher> maskCharMap;
   final Map<String, String> fallbackMap;
   final OverflowPolicy overflowPolicy;
+  final CompletionPolicy completionPolicy;
   final List<Matcher> _positionMatchers;
   final List<Matcher> _rawMatchers;
   bool _initialized = false;
@@ -28,6 +51,7 @@ class MaskFormatter extends StreamingFormatter {
     Map<String, Matcher>? maskCharMap,
     Map<String, String>? fallbackMap,
     this.overflowPolicy = OverflowPolicy.cancel,
+    this.completionPolicy = CompletionPolicy.eager,
   }) : maskCharMap = Map.unmodifiable(maskCharMap ?? {'#': Matchers.digits}),
        fallbackMap = Map.unmodifiable(fallbackMap ?? {}),
        _positionMatchers = List.filled(mask.length, Matchers.none),
@@ -72,17 +96,23 @@ class MaskFormatter extends StreamingFormatter {
     return buffer.toString();
   }
 
-  String _getConstantCharsBetween(int from, int to) {
+  bool get _appendFallback =>
+      completionPolicy == CompletionPolicy.eagerIfFallback || completionPolicy == CompletionPolicy.eager;
+
+  bool get _appendConstant =>
+      completionPolicy == CompletionPolicy.lazyIfFallback || completionPolicy == CompletionPolicy.eager;
+
+  String _getConstantCharsBetween(int from, int to, {bool acceptFallback = true, bool acceptConstant = true}) {
     final buffer = StringBuffer();
     for (int i = from; i < to; i++) {
       final char = mask[i];
       final fallback = fallbackMap[char];
-      if (fallback != null) {
+      if (fallback != null && acceptFallback) {
         buffer.write(fallback);
         continue;
       }
       final isVariable = maskCharMap.containsKey(char);
-      if (isVariable) {
+      if (isVariable || !acceptConstant) {
         break;
       }
       buffer.write(char);
@@ -98,9 +128,22 @@ class MaskFormatter extends StreamingFormatter {
     return streamingEditUpdate(context, (char) {
       if (char == StreamingFormatter.eol) {
         // Handle end of line - check if we need to append constant chars
-        final constantChars = _getConstantCharsBetween(resultLength, mask.length);
-        final isFallback = resultLength < mask.length && maskCharMap.containsKey(mask[resultLength]);
-        return ProcessingResult(sequence: inserted ? constantChars : '', cursorShift: isFallback ? 0 : null);
+        final constantChars = _getConstantCharsBetween(
+          resultLength,
+          mask.length,
+          acceptFallback: _appendFallback,
+          acceptConstant: _appendConstant,
+        );
+        final pureConstantChars = _getConstantCharsBetween(
+          resultLength,
+          mask.length,
+          acceptFallback: false,
+          acceptConstant: _appendConstant,
+        );
+        return ProcessingResult(
+          sequence: inserted ? constantChars : '',
+          cursorShift: inserted ? pureConstantChars.length : 0,
+        );
       }
 
       if (resultLength >= mask.length) {

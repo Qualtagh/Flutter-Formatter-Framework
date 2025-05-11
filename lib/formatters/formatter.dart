@@ -11,9 +11,7 @@ abstract class Formatter extends TextInputFormatter {
   static bool isDebug = false;
 
   /// Apply formatting to the text
-  String format(String text) {
-    return formatEditUpdate(const TextEditingValue(text: ''), TextEditingValue(text: text)).text;
-  }
+  String format(String text) => formatEditUpdate(const TextEditingValue(text: ''), TextEditingValue(text: text)).text;
 
   /// Strip applied formatting from the text
   String deformat(String text);
@@ -23,15 +21,11 @@ abstract class Formatter extends TextInputFormatter {
     if (!isDebug) {
       return;
     }
-    if (text == null || position == null) {
-      print(
-        "t('${oldValue.text}', ${oldValue.selection.start}, ${oldValue.selection.end}, '${newValue.text}', ${newValue.selection.end});",
-      );
-      return;
-    }
-    print(
-      "t('${oldValue.text}', ${oldValue.selection.start}, ${oldValue.selection.end}, '${newValue.text}', ${newValue.selection.end}, '$text', $position);",
-    );
+    final testCase =
+        text == null || position == null
+            ? "t('${oldValue.text}', ${oldValue.selection.start}, ${oldValue.selection.end}, '${newValue.text}', ${newValue.selection.end});"
+            : "t('${oldValue.text}', ${oldValue.selection.start}, ${oldValue.selection.end}, '${newValue.text}', ${newValue.selection.end}, '$text', $position);";
+    print(testCase);
   }
 
   @override

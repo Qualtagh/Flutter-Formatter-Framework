@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/formatters/mask_formatter.dart';
+import 'package:flutter_formatter_framework/types/matchers.dart';
 import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 import 'package:flutter_formatter_framework/util/string_extension.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -249,6 +250,182 @@ void main() {
       t('12-3456-7812345-678', 2, 3, '1203456-7812345-678', 3);
       // Replace a sequence
       t('12-3456-7812345-678', 0, 2, '12345678-3456-7812345-678', 8);
+    });
+  });
+
+  group('MaskFormatter with fallbackMap at the end', () {
+    final formatter = MaskFormatter(
+      mask: '##.@@',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('finish with fallback', () {
+      // Don't move the cursor
+      t('12', 2, 2, '12.', 3, '12.00', 3);
+      t('12.', 3, 3, '12.0', 4, '12.00', 4);
+      t('12.0', 4, 4, '12.00', 5, '12.00', 5);
+      // Type according to the fallback
+      t('12.00', 2, 2, '120.00', 3, '12.00', 4);
+      t('12.00', 2, 2, '12..00', 3, '12.00', 3);
+      t('12.00', 3, 3, '12..00', 4, '12.00', 3);
+      t('12.00', 3, 3, '12.000', 4, '12.00', 4);
+      t('12.00', 4, 4, '12.000', 5, '12.00', 5);
+      t('12.00', 5, 5, '12.000', 6, '12.00', 5);
+      // Type according to the mask
+      t('12.00', 2, 2, '129.00', 3, '12.90', 4);
+      t('12.00', 3, 3, '12.900', 4, '12.90', 4);
+      t('12.00', 4, 4, '12.090', 5, '12.09', 5);
+      t('12.00', 5, 5, '12.009', 6, '12.00', 5);
+      // Type non-matching characters
+      t('12.00', 2, 2, '12a.00', 3, '12.00', 2);
+      t('12.00', 3, 3, '12.a00', 4, '12.00', 3);
+      t('12.00', 4, 4, '12.0a0', 5, '12.00', 4);
+      t('12.00', 5, 5, '12.00a', 6, '12.00', 5);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12.00', 4, 4, '12.0', 3, '12.0', 3);
+      t('12.00', 2, 2, '1.00', 1, '10.0', 1);
+      // Erase a dot
+      t('12.0', 3, 3, '120', 2, '12.0', 2);
+    });
+  });
+
+  group('MaskFormatter with fallbackMap in the middle', () {
+    final formatter = MaskFormatter(
+      mask: '##-@@-##',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('type inside a fallback region', () {
+      // Don't move the cursor
+      t('12', 2, 2, '12-', 3, '12-00-', 3);
+      t('12-', 3, 3, '12-0', 4, '12-00-', 4);
+      t('12-0', 4, 4, '12-00', 5, '12-00-', 6);
+      // Type according to the fallback
+      t('12-00', 2, 2, '120-00', 3, '12-00-0', 4);
+      t('12-00', 2, 2, '12--00', 3, '12-00-', 3);
+      t('12-00', 3, 3, '12--00', 4, '12-00-', 3);
+      t('12-00', 3, 3, '12-000', 4, '12-00-0', 4);
+      t('12-00', 4, 4, '12-000', 5, '12-00-0', 5);
+      t('12-00', 5, 5, '12-000', 6, '12-00-0', 7);
+      // Type according to the mask
+      t('12-00', 2, 2, '129-00', 3, '12-90-0', 4);
+      t('12-00', 3, 3, '12-900', 4, '12-90-0', 4);
+      t('12-00', 4, 4, '12-090', 5, '12-09-0', 5);
+      t('12-00', 5, 5, '12-009', 6, '12-00-9', 7);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12-00', 4, 4, '12-0', 3, '12-0', 3);
+      t('12-00-', 4, 4, '12-0-', 3, '12-0', 3);
+      t('12-00', 2, 2, '1-00', 1, '10-0', 1);
+      // Erase a dash
+      t('12-0', 3, 3, '120', 2, '12-0', 2);
+    });
+  });
+
+  group('MaskFormatter (lazy)', () {
+    final formatter = MaskFormatter(
+      mask: '##-@@-##',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+      completionPolicy: CompletionPolicy.lazy,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('type inside a fallback region', () {
+      t('1', 1, 1, '12', 2, '12', 2);
+      t('12', 2, 2, '12-', 3, '12-', 3);
+      t('12-', 3, 3, '12-0', 4, '12-0', 4);
+      t('12-0', 4, 4, '12-00', 5, '12-00', 5);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12-00', 4, 4, '12-0', 3, '12-0', 3);
+      t('12-00-', 4, 4, '12-0-', 3, '12-0', 3);
+      t('12-00', 2, 2, '1-00', 1, '10-0', 1);
+      // Erase a dash
+      t('12-0', 3, 3, '120', 2, '12-0', 2);
+    });
+  });
+
+  group('MaskFormatter (eager)', () {
+    final formatter = MaskFormatter(
+      mask: '##-@@-##',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+      completionPolicy: CompletionPolicy.eager,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('type inside a fallback region', () {
+      t('1', 1, 1, '12', 2, '12-00-', 3);
+      t('12', 2, 2, '12-', 3, '12-00-', 3);
+      t('12-', 3, 3, '12-0', 4, '12-00-', 4);
+      t('12-0', 4, 4, '12-00', 5, '12-00-', 6);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12-00', 4, 4, '12-0', 3, '12-0', 3);
+      t('12-00-', 4, 4, '12-0-', 3, '12-0', 3);
+      t('12-00', 2, 2, '1-00', 1, '10-0', 1);
+      // Erase a dash
+      t('12-0', 3, 3, '120', 2, '12-0', 2);
+    });
+  });
+
+  group('MaskFormatter (lazy if fallback)', () {
+    final formatter = MaskFormatter(
+      mask: '##-@@-##',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+      completionPolicy: CompletionPolicy.lazyIfFallback,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('type inside a fallback region', () {
+      t('1', 1, 1, '12', 2, '12-', 3);
+      t('12', 2, 2, '12-', 3, '12-', 3);
+      t('12-', 3, 3, '12-0', 4, '12-0', 4);
+      t('12-0', 4, 4, '12-00', 5, '12-00-', 6);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12-00', 4, 4, '12-0', 3, '12-0', 3);
+      t('12-00-', 4, 4, '12-0-', 3, '12-0', 3);
+      t('12-00', 2, 2, '1-00', 1, '10-0', 1);
+      // Erase a dash
+      t('12-0', 3, 3, '120', 2, '12-0', 2);
+    });
+  });
+
+  group('MaskFormatter (eager if fallback)', () {
+    final formatter = MaskFormatter(
+      mask: '##-@@-##',
+      maskCharMap: {'#': Matchers.digits, '@': Matchers.digits},
+      fallbackMap: {'@': '0'},
+      overflowPolicy: OverflowPolicy.truncate,
+      completionPolicy: CompletionPolicy.eagerIfFallback,
+    );
+    final t = makeTestFunction(formatter: formatter);
+    test('type inside a fallback region', () {
+      t('1', 1, 1, '12', 2, '12', 2);
+      t('12', 2, 2, '12-', 3, '12-00', 3);
+      t('12-', 3, 3, '12-0', 4, '12-00', 4);
+      t('12-0', 4, 4, '12-00', 5, '12-00', 5);
+    });
+    test('allow erasing', () {
+      // Erase a digit
+      t('12-00', 4, 4, '12-0', 3, '12-0', 3);
+      t('12-00-', 4, 4, '12-0-', 3, '12-0', 3);
+      t('12-00', 2, 2, '1-00', 1, '10-0', 1);
+      // Erase a dash
+      t('12-0', 3, 3, '120', 2, '12-0', 2);
     });
   });
 }
