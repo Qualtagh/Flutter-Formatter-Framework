@@ -92,8 +92,7 @@ class MaskFormatter extends Formatter {
   @override
   TextEditingValue formatUpdate(TextEditingContext context) {
     initialize();
-    final changeType = context.changeType;
-    final inserted = changeType.isInsert;
+    final inserted = context.change.type.isInsert;
     int resultLength = 0;
     return streamingEditUpdate(context, (char) {
       if (char == Formatter.eol) {

@@ -65,7 +65,7 @@ abstract class Formatter extends TextInputFormatter {
   /// [processChar] is called for each character in the text and
   /// one more time when the end of the text is reached (with [eol]).
   TextEditingValue streamingEditUpdate(TextEditingContext context, ProcessingResult Function(String char) processChar) {
-    final changeType = context.changeType;
+    final change = context.change;
     final oldValue = context.old;
     final newValue = context.preformatted;
     final newText = StringBuffer();
@@ -80,7 +80,7 @@ abstract class Formatter extends TextInputFormatter {
       // - erasure: no adjustment is needed because all formatting changes
       //   are performed after the removed substring (after the cursor)
       final reached = i == rawSelection - 1 || i == rawSelection && i == newValue.text.length;
-      final inserting = changeType.isInsert;
+      final inserting = change.type.isInsert;
       if (reached && inserting) {
         newSelection = newText.length + result.cursorShift;
       }
@@ -91,8 +91,7 @@ abstract class Formatter extends TextInputFormatter {
     // it means that this character is a part of formatting.
     // So, we need to move the cursor one step forward to let
     // a user continue erasing.
-    // TODO: compare text[newSelection] to change.deleted[0]
-    if (changeType == ChangeType.delete && text == oldValue.text && newSelection < text.length) {
+    if (change.type == ChangeType.delete && newSelection < text.length && text[newSelection] == change.deleted[0]) {
       newSelection++;
     }
     newSelection = min(newSelection, text.length);
@@ -102,8 +101,8 @@ abstract class Formatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final changeType = getChange(oldValue, newValue).type;
-    final context = TextEditingContext(old: oldValue, edited: newValue, preformatted: newValue, changeType: changeType);
+    final change = getChange(oldValue, newValue);
+    final context = TextEditingContext(old: oldValue, edited: newValue, preformatted: newValue, change: change);
     try {
       return formatUpdate(context);
     } catch (e) {
