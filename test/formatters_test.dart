@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
-import 'package:flutter_formatter_framework/formatters/change.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/formatters/mask_formatter.dart';
+import 'package:flutter_formatter_framework/types/change.dart';
 import 'package:flutter_formatter_framework/util/string_extension.dart';
 import 'package:flutter_test/flutter_test.dart';
 

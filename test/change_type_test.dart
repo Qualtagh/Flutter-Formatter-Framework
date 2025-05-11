@@ -1,5 +1,5 @@
 import 'package:flutter/semantics.dart';
-import 'package:flutter_formatter_framework/formatters/change.dart';
+import 'package:flutter_formatter_framework/types/change.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -2,9 +2,9 @@ import 'dart:core';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_formatter_framework/formatters/change.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
-import 'package:flutter_formatter_framework/formatters/text_editing_context.dart';
+import 'package:flutter_formatter_framework/types/change.dart';
+import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 
 class ProcessingResult {
   /// A sequence to insert instead of the original character.

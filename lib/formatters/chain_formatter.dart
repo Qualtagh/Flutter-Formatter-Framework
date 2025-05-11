@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
-import 'package:flutter_formatter_framework/formatters/text_editing_context.dart';
+import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 
 class ChainFormatter extends Formatter {
   final List<TextInputFormatter> chain;

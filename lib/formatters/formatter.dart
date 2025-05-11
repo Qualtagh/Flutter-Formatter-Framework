@@ -1,10 +1,9 @@
 import 'dart:core';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_formatter_framework/formatters/change.dart';
-import 'package:flutter_formatter_framework/formatters/text_editing_context.dart';
-
-class CancelException implements Exception {}
+import 'package:flutter_formatter_framework/types/cancel_exception.dart';
+import 'package:flutter_formatter_framework/types/change.dart';
+import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 
 abstract class Formatter extends TextInputFormatter {
   /// Set to true to print test cases for Formatter tests
