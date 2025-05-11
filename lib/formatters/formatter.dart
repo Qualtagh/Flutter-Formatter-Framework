@@ -2,8 +2,8 @@ import 'dart:core';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/types/cancel_exception.dart';
-import 'package:flutter_formatter_framework/types/change.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
+import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 
 abstract class Formatter extends TextInputFormatter {
   /// Set to true to print test cases for Formatter tests
@@ -35,7 +35,7 @@ abstract class Formatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final change = getChange(oldValue, newValue);
+    final change = detectTextChange(oldValue, newValue);
     final context = TextEditingContext(old: oldValue, edited: newValue, preformatted: newValue, change: change);
     try {
       final formatted = formatUpdate(context);

@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/formatters/mask_formatter.dart';
-import 'package:flutter_formatter_framework/types/change.dart';
+import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 import 'package:flutter_formatter_framework/util/string_extension.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,7 +44,7 @@ TestFunction makeTestFunction({
   ]) {
     final oldInput = TextEditingValue(text: oldValue, selection: TextSelection(baseOffset: start, extentOffset: end));
     final newInput = TextEditingValue(text: newValue, selection: TextSelection.collapsed(offset: position));
-    final inserting = getChange(oldInput, newInput).type.isInsert;
+    final inserting = detectTextChange(oldInput, newInput).type.isInsert;
     final formatters = [
       formatter,
       if (priorFormatter != null) ChainFormatter([priorFormatter, formatter]),

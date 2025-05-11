@@ -1,5 +1,7 @@
 import 'package:flutter/semantics.dart';
 import 'package:flutter_formatter_framework/types/change.dart';
+import 'package:flutter_formatter_framework/types/change_type.dart';
+import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -24,10 +26,10 @@ void main() {
       insertedAt: insertedAt,
       inserted: inserted,
     );
-    expect(getChange(oldValue, newValue), expected);
+    expect(detectTextChange(oldValue, newValue), expected);
   }
 
-  group('getChangeType', () {
+  group('detectTextChange', () {
     test('basic', () {
       // Type a letter
       t('lorem ipsum', 1, 1, 'lNorem ipsum', 2, ChangeType.insert, 1, '', 1, 'N');
