@@ -46,8 +46,54 @@ enum ChangeType {
   const ChangeType(this.isInsert);
 }
 
-/// Detect a type of the text change
-ChangeType getChangeType(TextEditingValue oldValue, TextEditingValue newValue) {
+class Change {
+  /// Change type
+  final ChangeType type;
+
+  /// Start position of deleted sequence (before insertion)
+  final int deletedAt;
+
+  /// Deleted sequence
+  final String deleted;
+
+  /// Start position of inserted sequence (after deletion)
+  final int insertedAt;
+
+  /// Inserted sequence
+  final String inserted;
+
+  Change({
+    required this.type,
+    required this.deletedAt,
+    required this.deleted,
+    required this.insertedAt,
+    required this.inserted,
+  });
+
+  @override
+  String toString() {
+    return 'Change(type: $type, deletedAt: $deletedAt, deleted: "$deleted", insertedAt: $insertedAt, inserted: "$inserted")';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Change) return false;
+    return type == other.type &&
+        deletedAt == other.deletedAt &&
+        deleted == other.deleted &&
+        insertedAt == other.insertedAt &&
+        inserted == other.inserted;
+  }
+
+  @override
+  int get hashCode {
+    return type.hashCode ^ deletedAt.hashCode ^ deleted.hashCode ^ insertedAt.hashCode ^ inserted.hashCode;
+  }
+}
+
+/// Detect a text change
+Change getChange(TextEditingValue oldValue, TextEditingValue newValue) {
   final oldText = oldValue.text;
   final newText = newValue.text;
   final oldStart = min(max(0, oldValue.selection.start), oldText.length);
@@ -55,16 +101,29 @@ ChangeType getChangeType(TextEditingValue oldValue, TextEditingValue newValue) {
   final newPos = min(max(0, newValue.selection.start), newText.length);
   final isSelected = oldStart < oldEnd;
   if (isSelected) {
+    final selectedText = oldText.substring(oldStart, oldEnd);
     if (oldStart == newPos &&
         oldText.length > newText.length &&
         oldText.substring(0, oldStart) == newText.substring(0, newPos) &&
         oldText.substring(oldEnd) == newText.substring(newPos)) {
-      return ChangeType.clear;
+      return Change(
+        type: ChangeType.clear,
+        deletedAt: oldStart,
+        deleted: selectedText,
+        insertedAt: oldStart,
+        inserted: '',
+      );
     }
     if (oldStart < newPos &&
         oldText.substring(0, oldStart) == newText.substring(0, oldStart) &&
         oldText.substring(oldEnd) == newText.substring(newPos)) {
-      return ChangeType.replace;
+      return Change(
+        type: ChangeType.replace,
+        deletedAt: oldStart,
+        deleted: selectedText,
+        insertedAt: oldStart,
+        inserted: newText.substring(oldStart, newPos),
+      );
     }
     final selectionLength = oldEnd - oldStart;
     final movedTo = newPos - selectionLength;
@@ -75,34 +134,66 @@ ChangeType getChangeType(TextEditingValue oldValue, TextEditingValue newValue) {
     if (oldEnd != newPos &&
         movedTo >= 0 &&
         oldText.length == newText.length &&
-        oldText.substring(oldStart, oldEnd) == newText.substring(movedTo, newPos) &&
+        selectedText == newText.substring(movedTo, newPos) &&
         oldText.substring(0, min(oldStart, movedTo)) == newText.substring(0, min(oldStart, movedTo)) &&
         textA.substring(min(oldStart, movedTo), max(oldStart, movedTo)) ==
             textB.substring(min(oldEnd, newPos), max(oldEnd, newPos)) &&
         oldText.substring(max(oldEnd, newPos)) == newText.substring(max(oldEnd, newPos))) {
-      return ChangeType.move;
+      return Change(
+        type: ChangeType.move,
+        deletedAt: oldStart,
+        deleted: selectedText,
+        insertedAt: movedTo,
+        inserted: selectedText,
+      );
     }
-    return ChangeType.undo;
+    return Change(type: ChangeType.undo, deletedAt: 0, deleted: oldText, insertedAt: 0, inserted: newText);
   }
+  final lengthDelta = oldText.length - newText.length;
   if (oldStart == newPos &&
+      lengthDelta > 0 &&
       oldText.substring(0, oldStart) == newText.substring(0, newPos) &&
-      oldText.substring(oldText.length - newText.length + newPos) == newText.substring(newPos)) {
-    return ChangeType.delete;
+      oldText.substring(oldStart + lengthDelta) == newText.substring(newPos)) {
+    return Change(
+      type: ChangeType.delete,
+      deletedAt: oldStart,
+      deleted: oldText.substring(oldStart, oldStart + lengthDelta),
+      insertedAt: oldStart,
+      inserted: '',
+    );
   }
   if (oldStart > newPos &&
       oldText.substring(0, newPos) == newText.substring(0, newPos) &&
       oldText.substring(oldStart) == newText.substring(newPos)) {
-    return ChangeType.erase;
+    return Change(
+      type: ChangeType.erase,
+      deletedAt: newPos,
+      deleted: oldText.substring(newPos, oldStart),
+      insertedAt: newPos,
+      inserted: '',
+    );
   }
   if (oldStart < newPos &&
       oldText.substring(0, oldStart) == newText.substring(0, oldStart) &&
       oldText.substring(oldStart) == newText.substring(newPos)) {
-    return ChangeType.insert;
+    return Change(
+      type: ChangeType.insert,
+      deletedAt: oldStart,
+      deleted: '',
+      insertedAt: oldStart,
+      inserted: newText.substring(oldStart, newPos),
+    );
   }
   if (oldStart < newPos &&
       oldText.substring(0, oldStart) == newText.substring(0, oldStart) &&
       (newPos > oldText.length || oldText.substring(newPos) == newText.substring(newPos))) {
-    return ChangeType.overtype;
+    return Change(
+      type: ChangeType.overtype,
+      deletedAt: oldStart,
+      deleted: oldText.substring(oldStart, min(newPos, oldText.length)),
+      insertedAt: oldStart,
+      inserted: newText.substring(oldStart, newPos),
+    );
   }
-  return ChangeType.undo;
+  return Change(type: ChangeType.undo, deletedAt: 0, deleted: oldText, insertedAt: 0, inserted: newText);
 }

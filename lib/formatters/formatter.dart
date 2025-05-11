@@ -102,7 +102,7 @@ abstract class Formatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final changeType = getChangeType(oldValue, newValue);
+    final changeType = getChange(oldValue, newValue).type;
     final context = TextEditingContext(old: oldValue, edited: newValue, preformatted: newValue, changeType: changeType);
     try {
       return formatUpdate(context);
