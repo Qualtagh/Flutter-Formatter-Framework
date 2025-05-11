@@ -5,6 +5,7 @@ import 'package:flutter_formatter_framework/types/cancel_exception.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 
+/// Base class for all formatters of this framework
 abstract class Formatter extends TextInputFormatter {
   /// Set to true to print test cases for Formatter tests
   static bool isDebug = false;

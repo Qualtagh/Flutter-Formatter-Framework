@@ -1,10 +1,10 @@
 import 'dart:core';
-import 'dart:math';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/types/change_type.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
+import 'package:flutter_formatter_framework/util/position_tracker.dart';
 
 class ProcessingResult {
   /// A sequence to insert instead of the original character.
@@ -39,20 +39,25 @@ abstract class StreamingFormatter extends Formatter {
     final change = context.change;
     final newValue = context.preformatted;
     final newText = StringBuffer();
-    final rawSelection = newValue.selection.end;
-    int newSelection = rawSelection;
+    final positions = PositionListTracker([
+      newValue.selection.start,
+      newValue.selection.end,
+      newValue.composing.start,
+      newValue.composing.end,
+    ]);
     for (int i = 0; i <= newValue.text.length; i++) {
       final char = i < newValue.text.length ? newValue.text[i] : eol;
       final result = processChar(char);
-      final reached = i == rawSelection - 1 || i == rawSelection && i == newValue.text.length;
+      isReached(pos) => i == pos - 1 || i == pos && i == newValue.text.length;
       final inserting = change.type.isInsert;
       // Here, the algorithm reaches the cursor position.
       // We need to adjust this position according to the new formatting.
       // - insertion: move cursor to the end of the added sequence
       // - erasure: no adjustment is needed because all formatting changes
       //   are performed after the removed substring (after the cursor)
-      if (reached && inserting) {
-        newSelection = newText.length + result.cursorShift;
+      if (inserting) {
+        final newPos = newText.length + result.cursorShift;
+        positions.updateIfOld(isReached, (_) => newPos);
       }
       newText.write(result.sequence);
     }
@@ -61,10 +66,21 @@ abstract class StreamingFormatter extends Formatter {
     // it means that this character is a part of formatting.
     // So, we need to move the cursor one step forward to let
     // a user continue erasing.
-    if (change.type == ChangeType.delete && newSelection < text.length && text[newSelection] == change.deleted[0]) {
-      newSelection++;
+    if (change.type == ChangeType.delete) {
+      resistsDeletion(pos) => 0 <= pos && pos < text.length && text[pos] == change.deleted[0];
+      positions.updateIfNew(resistsDeletion, (pos) => pos + 1);
     }
-    newSelection = min(newSelection, text.length);
-    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: newSelection));
+    bool isOutOfBounds(pos) => pos > text.length;
+    positions.updateIfNew(isOutOfBounds, (_) => text.length);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection(
+        baseOffset: positions[0],
+        extentOffset: positions[1],
+        affinity: newValue.selection.affinity,
+        isDirectional: newValue.selection.isDirectional,
+      ),
+      composing: positions[2] == positions[3] ? TextRange.empty : TextRange(start: positions[2], end: positions[3]),
+    );
   }
 }
