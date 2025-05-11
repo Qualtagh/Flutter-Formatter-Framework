@@ -1,10 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_formatter_framework/formatters/streaming_formatter.dart';
+import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/types/cancel_exception.dart';
 import 'package:flutter_formatter_framework/types/matchers.dart';
+import 'package:flutter_formatter_framework/types/stream_step_result.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
+import 'package:flutter_formatter_framework/util/streaming_edit_update.dart';
 
 enum OverflowPolicy {
   /// Prohibit any changes which overflow the mask (restore the previous value).
@@ -36,7 +38,7 @@ enum CompletionPolicy {
   eagerIfFallback,
 }
 
-class MaskFormatter extends StreamingFormatter {
+class MaskFormatter extends Formatter {
   final String mask;
   final Map<String, Matcher> maskCharMap;
   final Map<String, String> fallbackMap;
@@ -126,7 +128,7 @@ class MaskFormatter extends StreamingFormatter {
     final inserted = context.change.type.isInsert;
     int resultLength = 0;
     return streamingEditUpdate(context, (char) {
-      if (char == StreamingFormatter.eol) {
+      if (char == eol) {
         // Handle end of line - check if we need to append constant chars
         final constantChars = _getConstantCharsBetween(
           resultLength,
@@ -140,7 +142,7 @@ class MaskFormatter extends StreamingFormatter {
           acceptFallback: false,
           acceptConstant: _appendConstant,
         );
-        return ProcessingResult(
+        return StreamStepResult(
           sequence: inserted ? constantChars : '',
           cursorShift: inserted ? pureConstantChars.length : 0,
         );
@@ -150,20 +152,20 @@ class MaskFormatter extends StreamingFormatter {
         if (overflowPolicy == OverflowPolicy.cancel) {
           throw CancelException();
         }
-        return ProcessingResult(sequence: '');
+        return StreamStepResult(sequence: '');
       }
 
       // Reject non-matching characters
       final matcher = _positionMatchers[resultLength];
       if (!matcher(char)) {
-        return ProcessingResult(sequence: '');
+        return StreamStepResult(sequence: '');
       }
 
       // Find first matching position
       final index = _rawMatchers.indexWhere((matcher) => matcher(char), resultLength);
       final constantChars = _getConstantCharsBetween(resultLength, index);
       resultLength = index + 1;
-      return ProcessingResult(sequence: constantChars + char);
+      return StreamStepResult(sequence: constantChars + char);
     });
   }
 }

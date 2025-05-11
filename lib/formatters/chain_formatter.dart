@@ -8,7 +8,7 @@ import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 class ChainFormatter extends Formatter {
   final List<TextInputFormatter> chain;
 
-  ChainFormatter(this.chain);
+  const ChainFormatter(this.chain);
 
   @override
   String deformat(String text) {

@@ -1,6 +1,7 @@
 import 'dart:core';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_formatter_framework/formatters/simple_formatter.dart';
 import 'package:flutter_formatter_framework/types/cancel_exception.dart';
 import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 import 'package:flutter_formatter_framework/util/detect_text_change.dart';
@@ -9,6 +10,11 @@ import 'package:flutter_formatter_framework/util/detect_text_change.dart';
 abstract class Formatter extends TextInputFormatter {
   /// Set to true to print test cases for Formatter tests
   static bool isDebug = false;
+
+  const Formatter();
+
+  const factory Formatter.withFunction(FormatUpdateFunction formatUpdate, [DeformatFunction? deformat]) =
+      SimpleFormatter;
 
   /// Apply formatting to the text
   String format(String text) => formatEditUpdate(const TextEditingValue(text: ''), TextEditingValue(text: text)).text;
