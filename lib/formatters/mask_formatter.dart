@@ -128,8 +128,8 @@ class MaskFormatter extends Formatter {
     final inserted = context.change.type.isInsert;
     int resultLength = 0;
     return streamingEditUpdate(context, (char) {
+      // Handle end of input: check if we need to append constant chars
       if (char == eol) {
-        // Handle end of line - check if we need to append constant chars
         final constantChars = _getConstantCharsBetween(
           resultLength,
           mask.length,
@@ -148,6 +148,7 @@ class MaskFormatter extends Formatter {
         );
       }
 
+      // Overflow
       if (resultLength >= mask.length) {
         if (overflowPolicy == OverflowPolicy.cancel) {
           throw CancelException();

@@ -24,14 +24,13 @@ class ChainFormatter extends Formatter {
 
   @override
   TextEditingValue formatUpdate(TextEditingContext context) {
-    TextEditingValue formatted = context.preformatted;
     for (final formatter in chain) {
       if (formatter is Formatter) {
-        formatted = formatter.formatUpdate(context.copyWith(preformatted: formatted));
+        context.preformatted = formatter.formatUpdate(TextEditingContext(parent: context));
       } else {
-        formatted = formatter.formatEditUpdate(context.old, formatted);
+        context.preformatted = formatter.formatEditUpdate(context.old, context.preformatted);
       }
     }
-    return formatted;
+    return context.preformatted;
   }
 }

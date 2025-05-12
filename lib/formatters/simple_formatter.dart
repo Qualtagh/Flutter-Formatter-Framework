@@ -5,6 +5,7 @@ import 'package:flutter_formatter_framework/types/text_editing_context.dart';
 typedef FormatUpdateFunction = TextEditingValue Function(TextEditingContext context);
 typedef DeformatFunction = String Function(String text);
 
+/// Used inside [Formatter.withFunction], not intended for direct use
 class SimpleFormatter extends Formatter {
   final FormatUpdateFunction _formatUpdate;
   final DeformatFunction? _deformat;
