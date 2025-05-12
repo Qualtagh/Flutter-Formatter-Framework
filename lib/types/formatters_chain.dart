@@ -13,7 +13,7 @@ import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
 ///   ]),
 /// )
 /// ```
-/// Use it instead of simply passing a list of formatters because
+/// Always use it instead of simply passing a list of formatters because
 /// this approach provides a more detailed [TextEditingContext] to each formatter.
 class FormattersChain extends DelegatingList<TextInputFormatter> {
   FormattersChain(List<TextInputFormatter> formatters) : super([ChainFormatter(formatters)]);

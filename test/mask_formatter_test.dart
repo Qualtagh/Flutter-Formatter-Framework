@@ -1,87 +1,11 @@
-import 'package:flutter/services.dart';
-import 'package:flutter_formatter_framework/formatters/chain_formatter.dart';
-import 'package:flutter_formatter_framework/formatters/formatter.dart';
 import 'package:flutter_formatter_framework/formatters/mask_formatter.dart';
 import 'package:flutter_formatter_framework/types/matchers.dart';
-import 'package:flutter_formatter_framework/types/stream_step_result.dart';
-import 'package:flutter_formatter_framework/util/detect_text_change.dart';
-import 'package:flutter_formatter_framework/util/streaming_edit_update.dart';
-import 'package:flutter_formatter_framework/util/string_extension.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// If [expectedValue] and [expectedPosition] are omitted, the test checks
-/// for a cancellation of the change (i.e. that the formatter returns the old value).
-typedef TestFunction =
-    void Function(
-      String oldValue,
-      int start,
-      int end,
-      String newValue,
-      int position, [
-      String? expectedValue,
-      int? expectedPosition,
-    ]);
-
-typedef SimpleTestFunction = void Function(String oldValue, String newValue, String expectedValue);
-
-void compareEditingValues(TextEditingValue actual, TextEditingValue expected) {
-  // Only text and selection position matter for now (the rest is not supported yet)
-  expect(actual.text, expected.text);
-  expect(actual.selection.baseOffset, expected.selection.baseOffset);
-  expect(actual.selection.extentOffset, expected.selection.extentOffset);
-}
-
-TestFunction makeTestFunction({
-  required Formatter formatter,
-  bool checkCursorPosition = true,
-  TextInputFormatter? priorFormatter,
-}) {
-  return (
-    String oldValue,
-    int start,
-    int end,
-    String newValue,
-    int position, [
-    String? expectedValue,
-    int? expectedPosition,
-  ]) {
-    final oldInput = TextEditingValue(text: oldValue, selection: TextSelection(baseOffset: start, extentOffset: end));
-    final newInput = TextEditingValue(text: newValue, selection: TextSelection.collapsed(offset: position));
-    final inserting = detectTextChange(oldInput, newInput).type.isInsert;
-    final formatters = [
-      formatter,
-      if (priorFormatter != null) ChainFormatter([priorFormatter, formatter]),
-    ];
-    for (final currentFormatter in formatters) {
-      final actual = currentFormatter.formatEditUpdate(oldInput, newInput);
-      final expected =
-          expectedValue == null || expectedPosition == null
-              ? oldInput
-              : TextEditingValue(text: expectedValue, selection: TextSelection.collapsed(offset: expectedPosition));
-      if (checkCursorPosition) {
-        compareEditingValues(actual, expected);
-      } else {
-        expect(actual.text, expected.text);
-      }
-      if (inserting) {
-        expect(currentFormatter.format(newValue), expectedValue ?? '');
-      }
-      // TODO: only suitable for MaskFormatter, the output of other formatters may be more complex
-      expect(currentFormatter.deformat(actual.text), actual.text.digitsOnly());
-    }
-  };
-}
-
-/// This one assumes that cursor position works well and only concentrates on the text value
-SimpleTestFunction makeSimpleTestFunction({required Formatter formatter, TextInputFormatter? priorFormatter}) {
-  final t = makeTestFunction(formatter: formatter, checkCursorPosition: false, priorFormatter: priorFormatter);
-  return (String oldValue, String newValue, String expectedValue) =>
-      t(oldValue, 0, oldValue.length, newValue, newValue.length, expectedValue, expectedValue.length);
-}
+import 'test_util.dart';
 
 void main() {
-  setUpAll(() => Formatter.isDebug = true);
-  tearDownAll(() => Formatter.isDebug = false);
+  initializeFormatterTests();
   group('MaskFormatter', () {
     final formatter = MaskFormatter(mask: '##-####-#######-###');
     final t = makeTestFunction(formatter: formatter);
@@ -428,28 +352,6 @@ void main() {
       t('12-00', 2, 2, '1-00', 1, '10-0', 1);
       // Erase a dash
       t('12-0', 3, 3, '120', 2, '12-0', 2);
-    });
-  });
-
-  group('Formatter.withFunction', () {
-    final everyThirdCharFormatter = Formatter.withFunction((context) {
-      int i = 0;
-      return streamingEditUpdate(context, (char) {
-        if (!Matchers.digits(char)) {
-          return StreamStepResult(sequence: '');
-        }
-        try {
-          return StreamStepResult(sequence: i > 0 && i % 3 == 0 && char != eol ? ' $char' : char);
-        } finally {
-          i++;
-        }
-      });
-    }, (text) => text.digitsOnly());
-    final t = makeSimpleTestFunction(formatter: everyThirdCharFormatter);
-    test('format', () {
-      t('', '1234567890', '123 456 789 0');
-      t('1234567890', '1234', '123 4');
-      t('123 4', '123 456', '123 456');
     });
   });
 }
