@@ -8,8 +8,7 @@ import 'package:flutter_formatter_framework/util/position_tracker.dart';
 const eol = '';
 
 /// Apply formatting to the text in a streaming manner.
-/// Use it instead of [formatEditUpdate] to simplify
-/// dealing with the cursor position.
+/// Use it instead of [formatEditUpdate] to simplify dealing with the cursor position.
 ///
 /// [processChar] is called for each character in the text and
 /// one more time when the end of the text is reached (with [eol]).

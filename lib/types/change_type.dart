@@ -1,3 +1,4 @@
+/// The type of text change after editing by user.
 enum ChangeType {
   /// Insert characters (type or paste): move cursor to the end of inserted sequence
   insert(true),

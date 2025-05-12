@@ -1,5 +1,6 @@
 typedef Matcher = bool Function(String char);
 
+/// A set of common matchers for characters, used in [MaskFormatter]'s [maskCharMap] property.
 class Matchers {
   static Matcher set(Iterable<String> allowed) {
     final set = allowed is Set ? allowed : allowed.toSet();

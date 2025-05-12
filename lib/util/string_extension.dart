@@ -1,5 +1,6 @@
-final nonDigitsRegex = RegExp(r'[^\d]+');
+final _nonDigitsRegex = RegExp(r'[^\d]+');
 
 extension StringExtension on String {
-  String digitsOnly() => replaceAll(nonDigitsRegex, '');
+  /// Returns a new string with all non-digit characters removed.
+  String digitsOnly() => replaceAll(_nonDigitsRegex, '');
 }

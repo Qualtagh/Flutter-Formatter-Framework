@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_formatter_framework/types/change.dart';
 import 'package:flutter_formatter_framework/types/change_type.dart';
 
-/// Detect a text change
+/// Detect what has changed in the text
 Change detectTextChange(TextEditingValue oldValue, TextEditingValue newValue) {
   final oldText = oldValue.text;
   final newText = newValue.text;

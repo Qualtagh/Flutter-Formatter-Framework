@@ -1,5 +1,6 @@
 import 'package:flutter_formatter_framework/types/change_type.dart';
 
+/// Represents a change in text editing.
 class Change {
   /// Change type
   final ChangeType type;

@@ -1,6 +1,8 @@
 typedef PositionPredicate = bool Function(int pos);
 typedef PositionUpdater = int Function(int pos);
 
+/// A utility class to track a list of positions and update them based on predicates.
+/// It's used by [streamingEditUpdate].
 class PositionListTracker {
   final List<PositionTracker> trackers;
 
@@ -21,6 +23,7 @@ class PositionListTracker {
   }
 }
 
+/// A utility class to track a single position and update it based on predicates.
 class PositionTracker {
   int old;
   int current;

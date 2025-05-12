@@ -10,42 +10,74 @@ import 'package:flutter_formatter_framework/util/streaming_edit_update.dart';
 
 enum OverflowPolicy {
   /// Prohibit any changes which overflow the mask (restore the previous value).
-  /// Example: mask = '####', cursor at 2, value = '12|34', enter '0' => '12|34' (no changes)
+  ///
+  /// Example: mask = `####`, cursor at 2, value = `12|34`, enter `0` => `12|34` (no changes)
   cancel,
 
   /// Truncate the value to the mask length.
-  /// Example: mask = '####', cursor at 2, value = '12|34', enter '0' => '120|3'
+  ///
+  /// Example: mask = `####`, cursor at 2, value = `12|34`, enter `0` => `120|3`
   truncate,
 }
 
 enum CompletionPolicy {
   /// Stop exactly at the end of input.
-  /// Example: mask = '##-##', value = '1', enter '2' => '12' (no dash at the end)
+  ///
+  /// Example: mask = `##-##`, value = `1`, enter `2` => `12` (no dash at the end)
   lazy,
 
   /// At the end of input, add all constant and fallback characters from the mask.
-  /// Example: mask = '##-##', value = '1', enter '2' => '12-' (with dash at the end)
+  ///
+  /// Example: mask = `##-##`, value = `1`, enter `2` => `12-` (with dash at the end)
   eager,
 
   /// Add only pure constant characters. Stop before fallback characters.
   /// If [fallbackMap] is empty, this is the same as [eager].
-  /// Example: mask = '##.@@', value = '1', enter '2', a fallback for '@' is '0' => '12.' (dot is added, but 0 is not)
+  ///
+  /// Example: mask = `##.@@`, value = `1`, enter `2`, a fallback for `@` is `0` => `12.` (dot is added, but 0 is not)
   lazyIfFallback,
 
   /// Add only fallback characters. Stop before constant characters.
   /// If [fallbackMap] is empty, this is the same as [lazy].
-  /// Example: mask = '##@.@@', value = '1', enter '2', a fallback for '@' is '0' => '120' (0 is added, but dot is not)
+  ///
+  /// Example: mask = `##@.@@`, value = `1`, enter `2`, a fallback for `@` is `0` => `120` (0 is added, but dot is not)
   eagerIfFallback,
 }
 
+/// A formatter which makes a text input match a given mask.
 class MaskFormatter extends Formatter {
+  /// Mask is a pattern string with wildcard or constant characters.
+  ///
+  /// Example: `##-##` (where `#` is a wildcard character defined in [maskCharMap] and `-` is a constant character).
   final String mask;
+
+  /// Map of wildcard characters to their matchers.
   final Map<String, Matcher> maskCharMap;
+
+  /// Map of wildcard characters which can be prefilled using a fallback without user input.
+  ///
+  /// Example: `$` is a wildcard character set to match any currency symbols (via [maskCharMap]).
+  /// - If the user enters `€`, `£`, or `$`, they will be accepted at the position of `$`.
+  /// - If [fallbackMap] is set to `{'$': '€'}`, and the user enters `50` (without specifying a currency),
+  ///   a default fallback will be substituted first, and the result will be `€50`.
   final Map<String, String> fallbackMap;
+
+  /// What to do if the input is longer than the mask.
   final OverflowPolicy overflowPolicy;
+
+  /// What to do at the end of input: whether to append trailing constant characters or not.
   final CompletionPolicy completionPolicy;
+
+  /// Whether a character can be inserted at the current or at the following positions.
+  ///
+  /// Example: mask = `##-##`, _positionMatchers at index 2 allows to enter both digits and `-`.
   final List<Matcher> _positionMatchers;
+
+  /// Whether a character can be inserted at the current position.
+  ///
+  /// Example: mask = `##-##`, _rawMatchers at index 2 allows to enter only `-`.
   final List<Matcher> _rawMatchers;
+
   bool _initialized = false;
 
   MaskFormatter({
